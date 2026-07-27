@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: macos-26
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and test
+        run: |
+          xcodebuild \
+            -project Vitrascope.xcodeproj \
+            -scheme Vitrascope \
+            -configuration Debug \
+            -destination "platform=macOS,arch=arm64" \
+            ARCHS=arm64 \
+            CODE_SIGNING_ALLOWED=NO \
+            test
