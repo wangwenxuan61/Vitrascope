@@ -41,4 +41,14 @@ final class CollectorTests: XCTestCase {
             XCTAssertLessThan(temperature, 150)
         }
     }
+
+    func testProcessCollectorReturnsValidMemoryReadingsOrUnavailable() {
+        var collector = ProcessCollector()
+        let snapshot = collector.collect()
+
+        if case .available(let processes) = snapshot.topMemory {
+            XCTAssertLessThanOrEqual(processes.count, 3)
+            XCTAssertTrue(processes.allSatisfy { !$0.name.isEmpty && $0.memoryBytes > 0 })
+        }
+    }
 }

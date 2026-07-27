@@ -7,14 +7,22 @@ private actor MetricsSampler {
     private var gpuCollector = GPUCollector()
     private var smcCollector = SMCCollector()
     private var hidTemperatureCollector = HIDTemperatureCollector()
+    private var processCollector = ProcessCollector()
+    private var latestProcessMetrics = ProcessMetricsSnapshot.empty
+    private var sampleCount = 0
 
-    func sample() -> SystemSnapshot {
+    func sample() -> (system: SystemSnapshot, processes: ProcessMetricsSnapshot) {
         let smc = smcCollector.collect()
         let temperatures = Self.mergedTemperatures(
             smc: smc.temperatures,
             hidCPU: hidTemperatureCollector.collect()
         )
-        return SystemSnapshot(
+        if sampleCount.isMultiple(of: 2) {
+            latestProcessMetrics = processCollector.collect()
+        }
+        sampleCount += 1
+
+        let system = SystemSnapshot(
             timestamp: .now,
             cpu: cpuCollector.collect(),
             memory: memoryCollector.collect(),
@@ -23,6 +31,7 @@ private actor MetricsSampler {
             temperatures: temperatures,
             fans: smc.fans
         )
+        return (system, latestProcessMetrics)
     }
 
     private static func mergedTemperatures(
@@ -59,6 +68,7 @@ private actor MetricsSampler {
 @MainActor
 final class SystemMonitor: ObservableObject {
     @Published private(set) var snapshot = SystemSnapshot.empty
+    @Published private(set) var processes = ProcessMetricsSnapshot.empty
     @Published private(set) var history: [SystemSnapshot] = []
 
     private let sampler = MetricsSampler()
@@ -69,8 +79,8 @@ final class SystemMonitor: ObservableObject {
         samplingTask = Task { [weak self] in
             while !Task.isCancelled {
                 guard let self else { return }
-                let newSnapshot = await sampler.sample()
-                update(with: newSnapshot)
+                let sample = await sampler.sample()
+                update(with: sample.system, processes: sample.processes)
                 try? await Task.sleep(for: .seconds(1))
             }
         }
@@ -80,8 +90,12 @@ final class SystemMonitor: ObservableObject {
         samplingTask?.cancel()
     }
 
-    private func update(with newSnapshot: SystemSnapshot) {
+    private func update(
+        with newSnapshot: SystemSnapshot,
+        processes newProcesses: ProcessMetricsSnapshot
+    ) {
         snapshot = newSnapshot
+        processes = newProcesses
         historyBuffer.append(newSnapshot)
         history = historyBuffer.elements
     }

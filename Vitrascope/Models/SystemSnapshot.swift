@@ -47,6 +47,25 @@ struct MemoryReading: Equatable, Sendable {
     }
 }
 
+struct ProcessResourceReading: Equatable, Sendable, Identifiable {
+    let pid: Int32
+    let name: String
+    let cpuPercent: Double
+    let memoryBytes: UInt64
+
+    var id: Int32 { pid }
+}
+
+struct ProcessMetricsSnapshot: Equatable, Sendable {
+    let topCPU: SensorAvailability<[ProcessResourceReading]>
+    let topMemory: SensorAvailability<[ProcessResourceReading]>
+
+    static let empty = ProcessMetricsSnapshot(
+        topCPU: .unavailable("Calculating"),
+        topMemory: .unavailable("Collecting")
+    )
+}
+
 struct FanReading: Equatable, Sendable, Identifiable {
     let id: Int
     let rpm: Double

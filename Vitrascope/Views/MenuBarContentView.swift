@@ -22,9 +22,14 @@ struct MenuBarContentView: View {
                             CPUCard(
                                 reading: monitor.snapshot.cpu,
                                 temperature: monitor.snapshot.cpuTemperature,
+                                processes: monitor.processes.topCPU,
                                 history: monitor.history
                             )
-                            MemoryCard(reading: monitor.snapshot.memory, history: monitor.history)
+                            MemoryCard(
+                                reading: monitor.snapshot.memory,
+                                processes: monitor.processes.topMemory,
+                                history: monitor.history
+                            )
                             GPUCard(reading: monitor.snapshot.gpuPercent, history: monitor.history)
                             ThermalCard(
                                 thermalState: monitor.snapshot.thermalState,

@@ -68,6 +68,81 @@ final class ModelTests: XCTestCase {
         XCTAssertEqual(snapshot.cpuTemperature.value ?? -1, 62.5, accuracy: 0.001)
     }
 
+    func testProcessMetricsSortCPUAndMemoryIndependently() {
+        let previous = [
+            ProcessResourceSample(
+                pid: 1,
+                name: "Memory App",
+                cpuTimeNanoseconds: 100,
+                memoryBytes: 900,
+                startTime: 10
+            ),
+            ProcessResourceSample(
+                pid: 2,
+                name: "CPU App",
+                cpuTimeNanoseconds: 100,
+                memoryBytes: 100,
+                startTime: 20
+            )
+        ]
+        let current = [
+            ProcessResourceSample(
+                pid: 1,
+                name: "Memory App",
+                cpuTimeNanoseconds: 200,
+                memoryBytes: 900,
+                startTime: 10
+            ),
+            ProcessResourceSample(
+                pid: 2,
+                name: "CPU App",
+                cpuTimeNanoseconds: 600,
+                memoryBytes: 100,
+                startTime: 20
+            )
+        ]
+
+        let snapshot = ProcessMetricsCalculator.snapshot(
+            current: current,
+            previous: previous,
+            elapsedNanoseconds: 1_000,
+            limit: 2
+        )
+
+        XCTAssertEqual(snapshot.topCPU.value?.map(\.name), ["CPU App", "Memory App"])
+        XCTAssertEqual(snapshot.topMemory.value?.map(\.name), ["Memory App", "CPU App"])
+        XCTAssertEqual(snapshot.topCPU.value?.first?.cpuPercent ?? -1, 50, accuracy: 0.001)
+    }
+
+    func testProcessMetricsIgnoreReusedPIDForCPU() {
+        let previous = [
+            ProcessResourceSample(
+                pid: 42,
+                name: "Old Process",
+                cpuTimeNanoseconds: 900,
+                memoryBytes: 100,
+                startTime: 1
+            )
+        ]
+        let current = [
+            ProcessResourceSample(
+                pid: 42,
+                name: "New Process",
+                cpuTimeNanoseconds: 10,
+                memoryBytes: 100,
+                startTime: 2
+            )
+        ]
+
+        let snapshot = ProcessMetricsCalculator.snapshot(
+            current: current,
+            previous: previous,
+            elapsedNanoseconds: 1_000
+        )
+
+        XCTAssertNil(snapshot.topCPU.value)
+    }
+
     func testStableFormatting() {
         XCTAssertEqual(MetricFormatting.percent(41.6), "42%")
         XCTAssertEqual(MetricFormatting.temperature(53.4), "53°C")

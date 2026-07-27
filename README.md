@@ -4,6 +4,10 @@ Vitrascope is a lightweight, English-language system monitor for Apple silicon
 Macs. It lives in the menu bar and presents live CPU, memory, GPU, temperature,
 thermal-state, and fan readings in a native Liquid Glass panel.
 
+CPU and Memory cards also show the three processes currently consuming the
+most CPU time or memory. Process rankings refresh every two seconds and remain
+entirely on the Mac.
+
 ## Requirements
 
 - Apple silicon Mac
@@ -17,7 +21,7 @@ requesting administrator access.
 
 ## Install from a DMG
 
-1. Download `Vitrascope-0.2.0-arm64.dmg` from
+1. Download `Vitrascope-0.3.0-arm64.dmg` from
    [GitHub Releases](https://github.com/wangwenxuan61/Vitrascope/releases).
 2. Open the DMG and drag Vitrascope to Applications.
 3. Because the free release is not notarized with a paid Apple Developer ID,
@@ -54,11 +58,11 @@ xcodebuild \
 To build the ad-hoc-signed DMG:
 
 ```sh
-./scripts/build-dmg.sh 0.2.0
+./scripts/build-dmg.sh 0.3.0
 ```
 
 The DMG and its SHA-256 checksum are written to `build/`. Pushing a semantic
-version tag such as `v0.2.0` runs the same build on GitHub Actions and attaches
+version tag such as `v0.3.0` runs the same build on GitHub Actions and attaches
 both files to a GitHub Release.
 
 ## Distribution note

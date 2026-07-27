@@ -3,6 +3,7 @@ import SwiftUI
 struct CPUCard: View {
     let reading: SensorAvailability<CPUReading>
     let temperature: SensorAvailability<Double>
+    let processes: SensorAvailability<[ProcessResourceReading]>
     let history: [SystemSnapshot]
 
     var body: some View {
@@ -23,6 +24,7 @@ struct CPUCard: View {
                     Spacer()
                 }
                 MiniChart(points: cpuPoints, color: .blue)
+                TopProcessList(readings: processes, metric: .cpu)
             case .unavailable(let message):
                 UnavailableReadingView(message: message)
             }
@@ -59,6 +61,7 @@ struct CPUCard: View {
 
 struct MemoryCard: View {
     let reading: SensorAvailability<MemoryReading>
+    let processes: SensorAvailability<[ProcessResourceReading]>
     let history: [SystemSnapshot]
 
     var body: some View {
@@ -84,6 +87,7 @@ struct MemoryCard: View {
                 }
 
                 MiniChart(points: memoryPoints, color: .blue)
+                TopProcessList(readings: processes, metric: .memory)
             case .unavailable(let message):
                 UnavailableReadingView(message: message)
             }
@@ -94,6 +98,53 @@ struct MemoryCard: View {
         history.compactMap { snapshot in
             guard case .available(let value) = snapshot.memory else { return nil }
             return ChartPoint(date: snapshot.timestamp, value: value.usagePercent)
+        }
+    }
+}
+
+private enum ProcessDisplayMetric {
+    case cpu
+    case memory
+}
+
+private struct TopProcessList: View {
+    let readings: SensorAvailability<[ProcessResourceReading]>
+    let metric: ProcessDisplayMetric
+
+    var body: some View {
+        Divider().opacity(0.35)
+
+        Text("Top Processes")
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundStyle(.secondary)
+
+        switch readings {
+        case .available(let processes):
+            ForEach(processes) { process in
+                HStack(spacing: 8) {
+                    Text(process.name)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    Spacer()
+                    Text(value(for: process))
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                }
+                .font(.system(size: 11, weight: .medium))
+            }
+        case .unavailable(let message):
+            Text(message)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.tertiary)
+        }
+    }
+
+    private func value(for process: ProcessResourceReading) -> String {
+        switch metric {
+        case .cpu:
+            MetricFormatting.percent(process.cpuPercent)
+        case .memory:
+            MetricFormatting.bytes(process.memoryBytes)
         }
     }
 }
