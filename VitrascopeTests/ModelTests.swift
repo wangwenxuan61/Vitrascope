@@ -219,4 +219,11 @@ final class ModelTests: XCTestCase {
         XCTAssertEqual(MenuBarLabel.fixedColumns(for: "63°C"), ["", "6", "3", "°", "C"])
         XCTAssertEqual(MenuBarLabel.fixedColumns(for: nil), ["", "—", "", "", ""])
     }
+
+    func testTemperatureColorLevels() {
+        XCTAssertEqual(TemperatureLevel(celsius: 69.9), .normal)
+        XCTAssertEqual(TemperatureLevel(celsius: 70), .elevated)
+        XCTAssertEqual(TemperatureLevel(celsius: 84.9), .elevated)
+        XCTAssertEqual(TemperatureLevel(celsius: 85), .hot)
+    }
 }

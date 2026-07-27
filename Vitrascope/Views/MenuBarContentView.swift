@@ -90,14 +90,13 @@ struct MenuBarContentView: View {
 
     private var footer: some View {
         HStack(spacing: 10) {
-            Picker("Menu Bar", selection: $selectedMetric) {
+            Picker("Show in menu", selection: $selectedMetric) {
                 ForEach(MetricKind.allCases) { metric in
                     Text(metric.title).tag(metric)
                 }
             }
             .pickerStyle(.menu)
-            .labelsHidden()
-            .accessibilityLabel("Menu bar metric")
+            .accessibilityLabel("Show in menu")
 
             Spacer()
 

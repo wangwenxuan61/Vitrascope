@@ -1,5 +1,29 @@
 import SwiftUI
 
+enum TemperatureLevel: Equatable {
+    case normal
+    case elevated
+    case hot
+
+    init(celsius: Double) {
+        if celsius >= 85 {
+            self = .hot
+        } else if celsius >= 70 {
+            self = .elevated
+        } else {
+            self = .normal
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .normal: .blue
+        case .elevated: .orange
+        case .hot: .red
+        }
+    }
+}
+
 struct CPUCard: View {
     let reading: SensorAvailability<CPUReading>
     let temperature: SensorAvailability<Double>
@@ -38,7 +62,7 @@ struct CPUCard: View {
             case .available(let value):
                 Text(MetricFormatting.temperature(value))
                     .font(.system(size: 19, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(TemperatureLevel(celsius: value).color)
                     .monospacedDigit()
             case .unavailable:
                 Text("Unavailable")
@@ -216,6 +240,7 @@ struct ThermalCard: View {
                         Spacer()
                         Text(MetricFormatting.temperature(reading.celsius))
                             .monospacedDigit()
+                            .foregroundStyle(TemperatureLevel(celsius: reading.celsius).color)
                     }
                 }
             case .unavailable:

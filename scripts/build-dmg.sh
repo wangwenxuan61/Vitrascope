@@ -3,8 +3,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-VERSION="${1:-0.4.0}"
-BUILD_NUMBER="${BUILD_NUMBER:-2}"
+VERSION="${1:-0.4.1}"
+BUILD_NUMBER="${BUILD_NUMBER:-3}"
 BUILD_DIR="${ROOT_DIR}/build"
 DERIVED_DATA="${BUILD_DIR}/DerivedData"
 STAGING_DIR="${BUILD_DIR}/dmg-root"
