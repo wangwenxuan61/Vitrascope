@@ -2,10 +2,11 @@ import SwiftUI
 
 struct CPUCard: View {
     let reading: SensorAvailability<CPUReading>
+    let temperature: SensorAvailability<Double>
     let history: [SystemSnapshot]
 
     var body: some View {
-        MetricCard(title: "CPU", systemImage: "cpu", accent: .cyan) {
+        MetricCard(title: "CPU", systemImage: "cpu", accent: .blue) {
             switch reading {
             case .available(let cpu):
                 HStack(alignment: .firstTextBaseline) {
@@ -13,13 +14,15 @@ struct CPUCard: View {
                         .font(.system(size: 28, weight: .semibold, design: .rounded))
                         .monospacedDigit()
                     Spacer()
-                    HStack(spacing: 10) {
-                        StatLabel(label: "User", value: MetricFormatting.percent(cpu.userPercent))
-                        StatLabel(label: "System", value: MetricFormatting.percent(cpu.systemPercent))
-                    }
+                    cpuTemperature
                 }
 
-                MiniChart(points: cpuPoints, color: .cyan)
+                HStack(spacing: 10) {
+                    StatLabel(label: "User", value: MetricFormatting.percent(cpu.userPercent))
+                    StatLabel(label: "System", value: MetricFormatting.percent(cpu.systemPercent))
+                    Spacer()
+                }
+                MiniChart(points: cpuPoints, color: .blue)
             case .unavailable(let message):
                 UnavailableReadingView(message: message)
             }
@@ -32,6 +35,26 @@ struct CPUCard: View {
             return ChartPoint(date: snapshot.timestamp, value: value.totalPercent)
         }
     }
+
+    @ViewBuilder
+    private var cpuTemperature: some View {
+        VStack(alignment: .trailing, spacing: 1) {
+            switch temperature {
+            case .available(let value):
+                Text(MetricFormatting.temperature(value))
+                    .font(.system(size: 19, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.blue)
+                    .monospacedDigit()
+            case .unavailable:
+                Text("Unavailable")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.secondary)
+            }
+            Text("CPU Temperature")
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(.secondary)
+        }
+    }
 }
 
 struct MemoryCard: View {
@@ -39,7 +62,11 @@ struct MemoryCard: View {
     let history: [SystemSnapshot]
 
     var body: some View {
-        MetricCard(title: "Memory", systemImage: "memorychip", accent: .blue) {
+        MetricCard(
+            title: "Memory",
+            systemImage: "memorychip",
+            accent: Color(red: 0.22, green: 0.56, blue: 0.86)
+        ) {
             switch reading {
             case .available(let memory):
                 HStack(alignment: .firstTextBaseline) {
@@ -76,7 +103,11 @@ struct GPUCard: View {
     let history: [SystemSnapshot]
 
     var body: some View {
-        MetricCard(title: "GPU", systemImage: "square.3.layers.3d", accent: .indigo) {
+        MetricCard(
+            title: "GPU",
+            systemImage: "square.3.layers.3d",
+            accent: Color(red: 0.40, green: 0.47, blue: 0.70)
+        ) {
             switch reading {
             case .available(let percent):
                 Text(MetricFormatting.percent(percent))
@@ -104,7 +135,11 @@ struct ThermalCard: View {
     let fans: SensorAvailability<[FanReading]>
 
     var body: some View {
-        MetricCard(title: "Thermal & Fans", systemImage: "thermometer.medium", accent: .mint) {
+        MetricCard(
+            title: "Thermal & Fans",
+            systemImage: "thermometer.medium",
+            accent: Color(red: 0.31, green: 0.62, blue: 0.55)
+        ) {
             HStack {
                 Text("System")
                     .foregroundStyle(.secondary)

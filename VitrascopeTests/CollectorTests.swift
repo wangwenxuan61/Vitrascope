@@ -33,4 +33,12 @@ final class CollectorTests: XCTestCase {
             XCTAssertTrue(fans.allSatisfy { $0.rpm >= 0 })
         }
     }
+
+    func testHIDTemperatureCollectorReturnsValidReadingOrUnavailable() {
+        var collector = HIDTemperatureCollector()
+        if case .available(let temperature) = collector.collect() {
+            XCTAssertGreaterThan(temperature, 0)
+            XCTAssertLessThan(temperature, 150)
+        }
+    }
 }

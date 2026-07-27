@@ -77,6 +77,14 @@ struct SystemSnapshot: Equatable, Sendable, Identifiable {
 
     var id: Date { timestamp }
 
+    var cpuTemperature: SensorAvailability<Double> {
+        guard case .available(let readings) = temperatures,
+              let reading = readings.first(where: { $0.id == "cpu" }) else {
+            return .unavailable("CPU temperature unavailable")
+        }
+        return .available(reading.celsius)
+    }
+
     static let empty = SystemSnapshot(
         timestamp: .now,
         cpu: .unavailable("Collecting"),

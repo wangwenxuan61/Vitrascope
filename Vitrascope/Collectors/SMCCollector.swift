@@ -62,15 +62,21 @@ private struct SMCValue {
         case "fpe2":
             return Double(UInt16(bytes[0]) << 8 | UInt16(bytes[1])) / 4
         case "flt " where bytes.count >= 4:
-            let bits = UInt32(bytes[0]) << 24
-                | UInt32(bytes[1]) << 16
-                | UInt32(bytes[2]) << 8
-                | UInt32(bytes[3])
+            let bits = UInt32(bytes[0])
+                | UInt32(bytes[1]) << 8
+                | UInt32(bytes[2]) << 16
+                | UInt32(bytes[3]) << 24
             return Double(Float(bitPattern: bits))
         case "ui8 ":
             return Double(bytes[0])
         case "ui16":
             return Double(UInt16(bytes[0]) << 8 | UInt16(bytes[1]))
+        case "ui32" where bytes.count >= 4:
+            let value = UInt32(bytes[0]) << 24
+                | UInt32(bytes[1]) << 16
+                | UInt32(bytes[2]) << 8
+                | UInt32(bytes[3])
+            return Double(value)
         default:
             return nil
         }
@@ -81,6 +87,7 @@ private final class SMCConnection {
     private static let kernelIndex: UInt32 = 2
     private static let readKeyInfoCommand: UInt8 = 9
     private static let readBytesCommand: UInt8 = 5
+    private static let getKeyFromIndexCommand: UInt8 = 8
 
     private var connection: io_connect_t = 0
 
@@ -149,6 +156,38 @@ private final class SMCConnection {
         return SMCValue(dataType: Self.string(from: dataType), bytes: bytes)
     }
 
+    func temperatureKeys() -> [String] {
+        guard let countValue = read("#KEY")?.numericValue else { return [] }
+        let count = min(max(Int(countValue), 0), 8_192)
+        return (0..<count).compactMap { index in
+            guard let key = key(at: UInt32(index)), key.hasPrefix("T") else { return nil }
+            return key
+        }
+    }
+
+    private func key(at index: UInt32) -> String? {
+        var input = SMCParamStruct()
+        var output = SMCParamStruct()
+        var outputSize = MemoryLayout<SMCParamStruct>.stride
+        input.data8 = Self.getKeyFromIndexCommand
+        input.data32 = index
+
+        let result = withUnsafePointer(to: &input) { inputPointer in
+            withUnsafeMutablePointer(to: &output) { outputPointer in
+                IOConnectCallStructMethod(
+                    connection,
+                    Self.kernelIndex,
+                    inputPointer,
+                    MemoryLayout<SMCParamStruct>.stride,
+                    outputPointer,
+                    &outputSize
+                )
+            }
+        }
+        guard result == KERN_SUCCESS, output.key != 0 else { return nil }
+        return Self.string(from: output.key)
+    }
+
     private static func fourCharacterCode(_ string: String) -> UInt32? {
         let bytes = Array(string.utf8)
         guard bytes.count == 4 else { return nil }
@@ -172,10 +211,33 @@ struct SMCReadings: Equatable, Sendable {
 }
 
 struct SMCCollector: MetricCollector {
-    private static let temperatureGroups: [(label: String, keys: [String])] = [
-        ("CPU", ["TC0P", "TC0D", "Tp01", "Tp05", "Tp09"]),
-        ("GPU", ["TG0P", "TG0D", "Tg05", "Tg0D"])
+    private static let fallbackTemperatureGroups: [(label: String, keys: [String])] = [
+        (
+            "CPU",
+            [
+                "TC0P", "TC0D", "TC0E", "TC0F", "TC1C", "TC2C",
+                "TC10", "TC11", "TC12", "TC13", "TC20", "TC21", "TC22", "TC23",
+                "TC30", "TC31", "TC32", "TC33", "TC40", "TC41", "TC42", "TC43",
+                "TC50", "TC51", "TC52", "TC53",
+                "Tp01", "Tp05", "Tp09", "Tp0D", "Tp0H", "Tp0L", "Tp0P", "Tp0T",
+                "Tp0V", "Tp0X", "Tp0Y", "Tp0b", "Tp0e", "Tp0f", "Tp0j",
+                "Tp1h", "Tp1t", "Tp1p", "Tp1l",
+                "Te05", "Te09", "Te0H", "Te0L", "Te0P", "Te0S", "Te0T",
+                "Tf04", "Tf09", "Tf0A", "Tf0B", "Tf0D", "Tf0E",
+                "Tf44", "Tf49", "Tf4A", "Tf4B", "Tf4D", "Tf4E"
+            ]
+        ),
+        (
+            "GPU",
+            [
+                "TG0P", "TG0D", "Tg04", "Tg05", "Tg0C", "Tg0D", "Tg0G", "Tg0H",
+                "Tg0K", "Tg0L", "Tg0P", "Tg0S", "Tg0T", "Tg0d", "Tg0e", "Tg0f",
+                "Tg0j", "Tg0k", "Tg1U", "Tg1k",
+                "Tf14", "Tf18", "Tf19", "Tf1A", "Tf24", "Tf28", "Tf29", "Tf2A"
+            ]
+        )
     ]
+    private var discoveredTemperatureGroups: [(label: String, keys: [String])]?
 
     mutating func collect() -> SMCReadings {
         guard let connection = SMCConnection() else {
@@ -185,7 +247,11 @@ struct SMCCollector: MetricCollector {
             )
         }
 
-        let temperatures = Self.temperatureGroups.compactMap { group -> TemperatureReading? in
+        if discoveredTemperatureGroups == nil {
+            discoveredTemperatureGroups = discoverTemperatureGroups(using: connection)
+        }
+        let groups = discoveredTemperatureGroups ?? Self.fallbackTemperatureGroups
+        let temperatures = groups.compactMap { group -> TemperatureReading? in
             let values = group.keys.compactMap { key -> Double? in
                 guard let value = connection.read(key)?.numericValue,
                       value.isFinite, value > 0, value < 130 else {
@@ -219,5 +285,36 @@ struct SMCCollector: MetricCollector {
                 ? .unavailable("No fan data")
                 : .available(fans)
         )
+    }
+
+    private func discoverTemperatureGroups(
+        using connection: SMCConnection
+    ) -> [(label: String, keys: [String])] {
+        let discoveredKeys = connection.temperatureKeys()
+        guard !discoveredKeys.isEmpty else {
+            return Self.fallbackTemperatureGroups
+        }
+
+        let cpuKeys = discoveredKeys.filter(Self.isCPUTemperatureKey)
+        let gpuKeys = discoveredKeys.filter(Self.isGPUTemperatureKey)
+        return [
+            ("CPU", mergedKeys(Self.fallbackTemperatureGroups[0].keys, cpuKeys)),
+            ("GPU", mergedKeys(Self.fallbackTemperatureGroups[1].keys, gpuKeys))
+        ]
+    }
+
+    private static func isCPUTemperatureKey(_ key: String) -> Bool {
+        let normalized = key.lowercased()
+        return normalized.hasPrefix("tc")
+            || normalized.hasPrefix("tp")
+            || normalized.hasPrefix("te")
+    }
+
+    private static func isGPUTemperatureKey(_ key: String) -> Bool {
+        key.lowercased().hasPrefix("tg")
+    }
+
+    private func mergedKeys(_ lhs: [String], _ rhs: [String]) -> [String] {
+        Array(Set(lhs + rhs)).sorted()
     }
 }

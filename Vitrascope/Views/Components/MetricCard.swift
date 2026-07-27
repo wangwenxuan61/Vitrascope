@@ -31,6 +31,11 @@ struct MetricCard<Content: View>: View {
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 18))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(.white.opacity(0.52), lineWidth: 0.8)
+        }
+        .shadow(color: .black.opacity(0.06), radius: 10, y: 4)
     }
 }
 

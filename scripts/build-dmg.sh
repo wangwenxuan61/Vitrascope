@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-VERSION="${1:-0.1.0}"
+VERSION="${1:-0.2.0}"
 BUILD_NUMBER="${BUILD_NUMBER:-1}"
 BUILD_DIR="${ROOT_DIR}/build"
 DERIVED_DATA="${BUILD_DIR}/DerivedData"

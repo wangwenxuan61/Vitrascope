@@ -7,15 +7,10 @@ struct MenuBarContentView: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [
-                    Color(red: 0.025, green: 0.07, blue: 0.14),
-                    Color(red: 0.07, green: 0.055, blue: 0.18),
-                    Color(red: 0.025, green: 0.11, blue: 0.17)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+            FrostedWindowBackground()
+                .ignoresSafeArea()
+
+            Color.white.opacity(0.08)
             .ignoresSafeArea()
 
             ScrollView(.vertical) {
@@ -24,7 +19,11 @@ struct MenuBarContentView: View {
 
                     GlassEffectContainer(spacing: 12) {
                         VStack(spacing: 12) {
-                            CPUCard(reading: monitor.snapshot.cpu, history: monitor.history)
+                            CPUCard(
+                                reading: monitor.snapshot.cpu,
+                                temperature: monitor.snapshot.cpuTemperature,
+                                history: monitor.history
+                            )
                             MemoryCard(reading: monitor.snapshot.memory, history: monitor.history)
                             GPUCard(reading: monitor.snapshot.gpuPercent, history: monitor.history)
                             ThermalCard(
@@ -42,17 +41,17 @@ struct MenuBarContentView: View {
             .scrollIndicators(.never)
         }
         .frame(width: 380, height: 520)
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
     }
 
     private var header: some View {
         HStack(spacing: 10) {
             ZStack {
                 Circle()
-                    .fill(.cyan.opacity(0.18))
+                    .fill(.white.opacity(0.22))
                 Image(systemName: "waveform.path.ecg")
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.cyan)
+                    .foregroundStyle(.blue)
             }
             .frame(width: 34, height: 34)
             .glassEffect(.regular, in: Circle())
@@ -104,6 +103,26 @@ struct MenuBarContentView: View {
         case .serious: .orange
         case .critical: .red
         case .unknown: .gray
+        }
+    }
+}
+
+private struct FrostedWindowBackground: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = TransparentVisualEffectView()
+        view.material = .popover
+        view.blendingMode = .behindWindow
+        view.state = .active
+        return view
+    }
+
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
+
+    private final class TransparentVisualEffectView: NSVisualEffectView {
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            window?.isOpaque = false
+            window?.backgroundColor = .clear
         }
     }
 }

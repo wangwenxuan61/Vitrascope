@@ -6,18 +6,43 @@ private actor MetricsSampler {
     private var memoryCollector = MemoryCollector()
     private var gpuCollector = GPUCollector()
     private var smcCollector = SMCCollector()
+    private var hidTemperatureCollector = HIDTemperatureCollector()
 
     func sample() -> SystemSnapshot {
         let smc = smcCollector.collect()
+        let temperatures = Self.mergedTemperatures(
+            smc: smc.temperatures,
+            hidCPU: hidTemperatureCollector.collect()
+        )
         return SystemSnapshot(
             timestamp: .now,
             cpu: cpuCollector.collect(),
             memory: memoryCollector.collect(),
             gpuPercent: gpuCollector.collect(),
             thermalState: Self.thermalState(),
-            temperatures: smc.temperatures,
+            temperatures: temperatures,
             fans: smc.fans
         )
+    }
+
+    private static func mergedTemperatures(
+        smc: SensorAvailability<[TemperatureReading]>,
+        hidCPU: SensorAvailability<Double>
+    ) -> SensorAvailability<[TemperatureReading]> {
+        if case .available(let smcReadings) = smc,
+           smcReadings.contains(where: { $0.id == "cpu" }) {
+            return smc
+        }
+
+        guard case .available(let cpuTemperature) = hidCPU else {
+            return smc
+        }
+        let cpu = TemperatureReading(id: "cpu", label: "CPU", celsius: cpuTemperature)
+
+        if case .available(let smcReadings) = smc {
+            return .available([cpu] + smcReadings.filter { $0.id != "cpu" })
+        }
+        return .available([cpu])
     }
 
     private static func thermalState() -> SystemThermalState {

@@ -51,6 +51,23 @@ final class ModelTests: XCTestCase {
         XCTAssertNil(reading.value)
     }
 
+    func testSnapshotExposesCPUTemperature() {
+        let snapshot = SystemSnapshot(
+            timestamp: .now,
+            cpu: .unavailable("Collecting"),
+            memory: .unavailable("Collecting"),
+            gpuPercent: .unavailable("Collecting"),
+            thermalState: .nominal,
+            temperatures: .available([
+                TemperatureReading(id: "gpu", label: "GPU", celsius: 48),
+                TemperatureReading(id: "cpu", label: "CPU", celsius: 62.5)
+            ]),
+            fans: .unavailable("No fan data")
+        )
+
+        XCTAssertEqual(snapshot.cpuTemperature.value ?? -1, 62.5, accuracy: 0.001)
+    }
+
     func testStableFormatting() {
         XCTAssertEqual(MetricFormatting.percent(41.6), "42%")
         XCTAssertEqual(MetricFormatting.temperature(53.4), "53°C")

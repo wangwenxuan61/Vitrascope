@@ -24,6 +24,7 @@
 		10000000000000000000000F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000010 /* Assets.xcassets */; };
 		100000000000000000000010 /* ModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000012 /* ModelTests.swift */; };
 		100000000000000000000011 /* CollectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000013 /* CollectorTests.swift */; };
+		100000000000000000000012 /* HIDTemperatureCollector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000015 /* HIDTemperatureCollector.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -57,6 +58,7 @@
 		200000000000000000000012 /* ModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelTests.swift; sourceTree = "<group>"; };
 		200000000000000000000013 /* CollectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectorTests.swift; sourceTree = "<group>"; };
 		200000000000000000000014 /* VitrascopeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VitrascopeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		200000000000000000000015 /* HIDTemperatureCollector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HIDTemperatureCollector.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -117,6 +119,7 @@
 				200000000000000000000007 /* MemoryCollector.swift */,
 				200000000000000000000008 /* GPUCollector.swift */,
 				200000000000000000000009 /* SMCCollector.swift */,
+				200000000000000000000015 /* HIDTemperatureCollector.swift */,
 			);
 			path = Collectors;
 			sourceTree = "<group>";
@@ -280,6 +283,7 @@
 				10000000000000000000000C /* MetricCards.swift in Sources */,
 				10000000000000000000000D /* MenuBarLabel.swift in Sources */,
 				10000000000000000000000E /* MenuBarContentView.swift in Sources */,
+				100000000000000000000012 /* HIDTemperatureCollector.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -414,7 +418,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.wangwenxuan61.vitrascope;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = macosx;
@@ -440,7 +444,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.wangwenxuan61.vitrascope;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = macosx;
