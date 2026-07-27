@@ -1,21 +1,17 @@
 import Foundation
 
 enum MetricFormatting {
-    static let byteFormatter: ByteCountFormatter = {
+    static func bytes(_ value: UInt64) -> String {
         let formatter = ByteCountFormatter()
         formatter.allowedUnits = [.useGB, .useMB]
         formatter.countStyle = .memory
         formatter.includesUnit = true
         formatter.isAdaptive = true
-        return formatter
-    }()
+        return formatter.string(fromByteCount: Int64(clamping: value))
+    }
 
     static func percent(_ value: Double) -> String {
         "\(Int(value.rounded()))%"
-    }
-
-    static func bytes(_ value: UInt64) -> String {
-        byteFormatter.string(fromByteCount: Int64(clamping: value))
     }
 
     static func temperature(_ value: Double) -> String {
