@@ -142,7 +142,7 @@ private struct TopProcessList: View {
     private func value(for process: ProcessResourceReading) -> String {
         switch metric {
         case .cpu:
-            MetricFormatting.percent(process.cpuPercent)
+            MetricFormatting.processPercent(process.cpuPercent)
         case .memory:
             MetricFormatting.bytes(process.memoryBytes)
         }

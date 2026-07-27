@@ -73,14 +73,14 @@ final class ModelTests: XCTestCase {
             ProcessResourceSample(
                 pid: 1,
                 name: "Memory App",
-                cpuTimeNanoseconds: 100,
+                cpuTimeTicks: 100,
                 memoryBytes: 900,
                 startTime: 10
             ),
             ProcessResourceSample(
                 pid: 2,
                 name: "CPU App",
-                cpuTimeNanoseconds: 100,
+                cpuTimeTicks: 100,
                 memoryBytes: 100,
                 startTime: 20
             )
@@ -89,14 +89,14 @@ final class ModelTests: XCTestCase {
             ProcessResourceSample(
                 pid: 1,
                 name: "Memory App",
-                cpuTimeNanoseconds: 200,
+                cpuTimeTicks: 200,
                 memoryBytes: 900,
                 startTime: 10
             ),
             ProcessResourceSample(
                 pid: 2,
                 name: "CPU App",
-                cpuTimeNanoseconds: 600,
+                cpuTimeTicks: 600,
                 memoryBytes: 100,
                 startTime: 20
             )
@@ -114,12 +114,43 @@ final class ModelTests: XCTestCase {
         XCTAssertEqual(snapshot.topCPU.value?.first?.cpuPercent ?? -1, 50, accuracy: 0.001)
     }
 
+    func testProcessMetricsApplyMachTimebase() {
+        let previous = [
+            ProcessResourceSample(
+                pid: 1,
+                name: "Busy App",
+                cpuTimeTicks: 100,
+                memoryBytes: 100,
+                startTime: 10
+            )
+        ]
+        let current = [
+            ProcessResourceSample(
+                pid: 1,
+                name: "Busy App",
+                cpuTimeTicks: 124,
+                memoryBytes: 100,
+                startTime: 10
+            )
+        ]
+
+        let snapshot = ProcessMetricsCalculator.snapshot(
+            current: current,
+            previous: previous,
+            elapsedNanoseconds: 1_000,
+            timebaseNumerator: 125,
+            timebaseDenominator: 3
+        )
+
+        XCTAssertEqual(snapshot.topCPU.value?.first?.cpuPercent ?? -1, 100, accuracy: 0.001)
+    }
+
     func testProcessMetricsIgnoreReusedPIDForCPU() {
         let previous = [
             ProcessResourceSample(
                 pid: 42,
                 name: "Old Process",
-                cpuTimeNanoseconds: 900,
+                cpuTimeTicks: 900,
                 memoryBytes: 100,
                 startTime: 1
             )
@@ -128,7 +159,7 @@ final class ModelTests: XCTestCase {
             ProcessResourceSample(
                 pid: 42,
                 name: "New Process",
-                cpuTimeNanoseconds: 10,
+                cpuTimeTicks: 10,
                 memoryBytes: 100,
                 startTime: 2
             )
@@ -145,6 +176,9 @@ final class ModelTests: XCTestCase {
 
     func testStableFormatting() {
         XCTAssertEqual(MetricFormatting.percent(41.6), "42%")
+        XCTAssertEqual(MetricFormatting.processPercent(4.24), "4.2%")
+        XCTAssertEqual(MetricFormatting.processPercent(0.04), "<0.1%")
+        XCTAssertEqual(MetricFormatting.processPercent(14.6), "15%")
         XCTAssertEqual(MetricFormatting.temperature(53.4), "53°C")
         XCTAssertEqual(MetricFormatting.rpm(1_999.6), "2000 RPM")
     }

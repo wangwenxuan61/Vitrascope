@@ -14,6 +14,20 @@ enum MetricFormatting {
         "\(Int(value.rounded()))%"
     }
 
+    static func processPercent(_ value: Double) -> String {
+        if value > 0, value < 0.1 {
+            return "<0.1%"
+        }
+        if value < 10 {
+            return String(
+                format: "%.1f%%",
+                locale: Locale(identifier: "en_US_POSIX"),
+                value
+            )
+        }
+        return percent(value)
+    }
+
     static func temperature(_ value: Double) -> String {
         "\(Int(value.rounded()))°C"
     }

@@ -4,7 +4,7 @@ import Foundation
 struct ProcessResourceSample: Equatable, Sendable {
     let pid: Int32
     let name: String
-    let cpuTimeNanoseconds: UInt64
+    let cpuTimeTicks: UInt64
     let memoryBytes: UInt64
     let startTime: UInt64
 }
@@ -14,6 +14,8 @@ enum ProcessMetricsCalculator {
         current: [ProcessResourceSample],
         previous: [ProcessResourceSample],
         elapsedNanoseconds: UInt64,
+        timebaseNumerator: UInt32 = 1,
+        timebaseDenominator: UInt32 = 1,
         limit: Int = 3
     ) -> ProcessMetricsSnapshot {
         let previousByProcess = Dictionary(
@@ -24,12 +26,17 @@ enum ProcessMetricsCalculator {
 
         let readings = current.map { sample in
             let identity = ProcessIdentity(pid: sample.pid, startTime: sample.startTime)
-            let previousCPUTime = previousByProcess[identity]?.cpuTimeNanoseconds
+            let previousCPUTime = previousByProcess[identity]?.cpuTimeTicks
             let cpuPercent: Double
             if let previousCPUTime,
-               sample.cpuTimeNanoseconds >= previousCPUTime,
-               elapsedNanoseconds > 0 {
-                cpuPercent = Double(sample.cpuTimeNanoseconds - previousCPUTime)
+               sample.cpuTimeTicks >= previousCPUTime,
+               elapsedNanoseconds > 0,
+               timebaseDenominator > 0 {
+                let deltaTicks = sample.cpuTimeTicks - previousCPUTime
+                let deltaNanoseconds = Double(deltaTicks)
+                    * Double(timebaseNumerator)
+                    / Double(timebaseDenominator)
+                cpuPercent = deltaNanoseconds
                     / Double(elapsedNanoseconds) * 100
             } else {
                 cpuPercent = 0
@@ -72,6 +79,13 @@ enum ProcessMetricsCalculator {
 struct ProcessCollector: MetricCollector {
     private var previousSamples: [ProcessResourceSample] = []
     private var previousTimestamp: UInt64?
+    private let timebase: mach_timebase_info_data_t
+
+    init() {
+        var timebase = mach_timebase_info_data_t()
+        mach_timebase_info(&timebase)
+        self.timebase = timebase
+    }
 
     mutating func collect() -> ProcessMetricsSnapshot {
         let timestamp = DispatchTime.now().uptimeNanoseconds
@@ -103,7 +117,9 @@ struct ProcessCollector: MetricCollector {
         return ProcessMetricsCalculator.snapshot(
             current: samples,
             previous: previousSamples,
-            elapsedNanoseconds: timestamp - previousTimestamp
+            elapsedNanoseconds: timestamp - previousTimestamp,
+            timebaseNumerator: timebase.numer,
+            timebaseDenominator: timebase.denom
         )
     }
 
@@ -137,7 +153,7 @@ struct ProcessCollector: MetricCollector {
         return ProcessResourceSample(
             pid: pid,
             name: processName(pid: pid),
-            cpuTimeNanoseconds: cpuTime.partialValue,
+            cpuTimeTicks: cpuTime.partialValue,
             memoryBytes: usage.ri_phys_footprint,
             startTime: usage.ri_proc_start_abstime
         )
