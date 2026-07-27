@@ -11,14 +11,10 @@ struct MenuBarLabel: View {
                 .frame(width: 18, alignment: .center)
 
             if metric != .iconOnly {
-                HStack(spacing: 0) {
-                    ForEach(Array(displayColumns.enumerated()), id: \.offset) { _, column in
-                        Text(verbatim: column)
-                            .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                            .frame(width: 9, alignment: .center)
-                    }
-                }
-                .frame(width: 45, alignment: .leading)
+                Text(verbatim: displayText)
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    .lineLimit(1)
+                    .frame(width: 45, alignment: .leading)
             }
         }
         .fixedSize(horizontal: true, vertical: false)
@@ -40,8 +36,14 @@ struct MenuBarLabel: View {
         }
     }
 
-    private var displayColumns: [String] {
-        Self.fixedColumns(for: displayValue)
+    private var displayText: String {
+        Self.fixedText(for: displayValue)
+    }
+
+    static func fixedText(for value: String?) -> String {
+        fixedColumns(for: value)
+            .map { $0.isEmpty ? " " : $0 }
+            .joined()
     }
 
     static func fixedColumns(for value: String?) -> [String] {

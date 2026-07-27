@@ -21,7 +21,7 @@ requesting administrator access.
 
 ## Install from a DMG
 
-1. Download `Vitrascope-0.4.1-arm64.dmg` from
+1. Download `Vitrascope-0.4.2-arm64.dmg` from
    [GitHub Releases](https://github.com/houou81/VitrascopeLW/releases).
 2. Open the DMG and drag Vitrascope to Applications.
 3. Because the free release is not notarized with a paid Apple Developer ID,
@@ -38,11 +38,11 @@ Click the waveform icon in the menu bar to open the monitor. The footer picker
 changes the live menu-bar readout between CPU, Memory, GPU, Temperature, and
 Icon Only. Choose **Quit** in the panel to stop Vitrascope.
 
-The menu-bar value uses five independently rendered fixed-width cells: three
-for the number and two for the unit. Empty leading cells keep values such as
-`9%`, `60%`, `61%`, `100%`, and `63°C` in exactly the same layout. Each glyph
-has its own fixed coordinate, so neither font fallback nor a changing reading
-can move the waveform icon or adjacent value columns.
+The menu-bar value uses one fixed-width monospaced text field with five
+character positions: three for the number and two for the unit. Space padding
+keeps values such as `9%`, `60%`, `61%`, `100%`, and `63°C` in exactly the same
+layout without relying on nested views that macOS may omit from a menu-bar
+label.
 
 ## Lightweight performance design
 
@@ -116,11 +116,11 @@ xcodebuild \
 To build the ad-hoc-signed DMG:
 
 ```sh
-./scripts/build-dmg.sh 0.4.1
+./scripts/build-dmg.sh 0.4.2
 ```
 
 The DMG and its SHA-256 checksum are written to `build/`. Pushing a semantic
-version tag such as `v0.4.1` runs the same build on GitHub Actions and attaches
+version tag such as `v0.4.2` runs the same build on GitHub Actions and attaches
 both files to a GitHub Release.
 
 ## Distribution note

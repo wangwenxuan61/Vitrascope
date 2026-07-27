@@ -220,6 +220,17 @@ final class ModelTests: XCTestCase {
         XCTAssertEqual(MenuBarLabel.fixedColumns(for: nil), ["", "—", "", "", ""])
     }
 
+    func testMenuBarValuesRenderAsSingleFixedWidthText() {
+        XCTAssertEqual(MenuBarLabel.fixedText(for: "9%"), "  9% ")
+        XCTAssertEqual(MenuBarLabel.fixedText(for: "60%"), " 60% ")
+        XCTAssertEqual(MenuBarLabel.fixedText(for: "100%"), "100% ")
+        XCTAssertEqual(MenuBarLabel.fixedText(for: "63°C"), " 63°C")
+        XCTAssertEqual(MenuBarLabel.fixedText(for: nil), " —   ")
+        XCTAssertEqual(MenuBarLabel.fixedText(for: "9%").count, 5)
+        XCTAssertEqual(MenuBarLabel.fixedText(for: "100%").count, 5)
+        XCTAssertEqual(MenuBarLabel.fixedText(for: "63°C").count, 5)
+    }
+
     func testTemperatureColorLevels() {
         XCTAssertEqual(TemperatureLevel(celsius: 69.9), .normal)
         XCTAssertEqual(TemperatureLevel(celsius: 70), .elevated)
