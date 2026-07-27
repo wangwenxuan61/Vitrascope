@@ -90,6 +90,8 @@ private final class SMCConnection {
     private static let getKeyFromIndexCommand: UInt8 = 8
 
     private var connection: io_connect_t = 0
+    private var keyInfoCache: [UInt32: SMCKeyInfoData] = [:]
+    private(set) var isUsable = true
 
     init?() {
         guard let matching = IOServiceMatching("AppleSMC") else { return nil }
@@ -109,35 +111,46 @@ private final class SMCConnection {
     }
 
     func read(_ key: String) -> SMCValue? {
-        guard let keyCode = Self.fourCharacterCode(key) else { return nil }
+        guard isUsable, let keyCode = Self.fourCharacterCode(key) else { return nil }
+
+        let cachedKeyInfo = keyInfoCache[keyCode]
+        let keyInfo: SMCKeyInfoData
+        if let cached = cachedKeyInfo {
+            keyInfo = cached
+        } else {
+            var input = SMCParamStruct()
+            var output = SMCParamStruct()
+            var outputSize = MemoryLayout<SMCParamStruct>.stride
+            input.key = keyCode
+            input.data8 = Self.readKeyInfoCommand
+
+            let result = withUnsafePointer(to: &input) { inputPointer in
+                withUnsafeMutablePointer(to: &output) { outputPointer in
+                    IOConnectCallStructMethod(
+                        connection,
+                        Self.kernelIndex,
+                        inputPointer,
+                        MemoryLayout<SMCParamStruct>.stride,
+                        outputPointer,
+                        &outputSize
+                    )
+                }
+            }
+            guard result == KERN_SUCCESS else {
+                return nil
+            }
+            keyInfo = output.keyInfo
+            keyInfoCache[keyCode] = keyInfo
+        }
 
         var input = SMCParamStruct()
         var output = SMCParamStruct()
         var outputSize = MemoryLayout<SMCParamStruct>.stride
         input.key = keyCode
-        input.data8 = Self.readKeyInfoCommand
-
-        var result = withUnsafePointer(to: &input) { inputPointer in
-            withUnsafeMutablePointer(to: &output) { outputPointer in
-                IOConnectCallStructMethod(
-                    connection,
-                    Self.kernelIndex,
-                    inputPointer,
-                    MemoryLayout<SMCParamStruct>.stride,
-                    outputPointer,
-                    &outputSize
-                )
-            }
-        }
-        guard result == KERN_SUCCESS else { return nil }
-
-        let dataType = output.keyInfo.dataType
-        input.keyInfo.dataSize = output.keyInfo.dataSize
+        input.keyInfo = keyInfo
         input.data8 = Self.readBytesCommand
-        output = SMCParamStruct()
-        outputSize = MemoryLayout<SMCParamStruct>.stride
 
-        result = withUnsafePointer(to: &input) { inputPointer in
+        let result = withUnsafePointer(to: &input) { inputPointer in
             withUnsafeMutablePointer(to: &output) { outputPointer in
                 IOConnectCallStructMethod(
                     connection,
@@ -149,11 +162,16 @@ private final class SMCConnection {
                 )
             }
         }
-        guard result == KERN_SUCCESS else { return nil }
+        guard result == KERN_SUCCESS else {
+            if cachedKeyInfo != nil, keyInfo.dataSize > 0 {
+                isUsable = false
+            }
+            return nil
+        }
 
-        let byteCount = min(Int(input.keyInfo.dataSize), 32)
+        let byteCount = min(Int(keyInfo.dataSize), 32)
         let bytes = withUnsafeBytes(of: output.bytes) { Array($0.prefix(byteCount)) }
-        return SMCValue(dataType: Self.string(from: dataType), bytes: bytes)
+        return SMCValue(dataType: Self.string(from: keyInfo.dataType), bytes: bytes)
     }
 
     func temperatureKeys() -> [String] {
@@ -166,6 +184,8 @@ private final class SMCConnection {
     }
 
     private func key(at index: UInt32) -> String? {
+        guard isUsable else { return nil }
+
         var input = SMCParamStruct()
         var output = SMCParamStruct()
         var outputSize = MemoryLayout<SMCParamStruct>.stride
@@ -237,30 +257,42 @@ struct SMCCollector: MetricCollector {
             ]
         )
     ]
-    private var discoveredTemperatureGroups: [(label: String, keys: [String])]?
+    private var connection: SMCConnection?
+    private var candidateTemperatureGroups: [(label: String, keys: [String])]?
+    private var activeTemperatureGroups: [(label: String, keys: [String])]?
 
     mutating func collect() -> SMCReadings {
-        guard let connection = SMCConnection() else {
+        guard let connection = activeConnection() else {
             return SMCReadings(
                 temperatures: .unavailable("SMC unavailable"),
                 fans: .unavailable("SMC unavailable")
             )
         }
 
-        if discoveredTemperatureGroups == nil {
-            discoveredTemperatureGroups = discoverTemperatureGroups(using: connection)
-        }
-        let groups = discoveredTemperatureGroups ?? Self.fallbackTemperatureGroups
-        let temperatures = groups.compactMap { group -> TemperatureReading? in
-            let values = group.keys.compactMap { key -> Double? in
-                guard let value = connection.read(key)?.numericValue,
-                      value.isFinite, value > 0, value < 130 else {
-                    return nil
-                }
-                return value
+        let temperatureResult: (
+            readings: [TemperatureReading],
+            successfulGroups: [(label: String, keys: [String])]
+        )
+        if let activeTemperatureGroups {
+            temperatureResult = readTemperatures(
+                from: activeTemperatureGroups,
+                using: connection
+            )
+        } else {
+            let candidateGroups: [(label: String, keys: [String])]
+            if let candidateTemperatureGroups {
+                candidateGroups = candidateTemperatureGroups
+            } else {
+                candidateGroups = discoverTemperatureGroups(using: connection)
+                self.candidateTemperatureGroups = candidateGroups
             }
-            guard let hottest = values.max() else { return nil }
-            return TemperatureReading(id: group.label.lowercased(), label: group.label, celsius: hottest)
+            temperatureResult = readTemperatures(
+                from: candidateGroups,
+                using: connection
+            )
+            if connection.isUsable, !temperatureResult.successfulGroups.isEmpty {
+                self.activeTemperatureGroups = temperatureResult.successfulGroups
+            }
         }
 
         let fans: [FanReading]
@@ -277,14 +309,66 @@ struct SMCCollector: MetricCollector {
             fans = []
         }
 
+        if !connection.isUsable {
+            self.connection = nil
+        }
+
         return SMCReadings(
-            temperatures: temperatures.isEmpty
+            temperatures: temperatureResult.readings.isEmpty
                 ? .unavailable("Not exposed by this Mac")
-                : .available(temperatures),
+                : .available(temperatureResult.readings),
             fans: fans.isEmpty
                 ? .unavailable("No fan data")
                 : .available(fans)
         )
+    }
+
+    private mutating func activeConnection() -> SMCConnection? {
+        if let connection, connection.isUsable {
+            return connection
+        }
+        let connection = SMCConnection()
+        self.connection = connection
+        return connection
+    }
+
+    private func readTemperatures(
+        from groups: [(label: String, keys: [String])],
+        using connection: SMCConnection
+    ) -> (
+        readings: [TemperatureReading],
+        successfulGroups: [(label: String, keys: [String])]
+    ) {
+        var readings: [TemperatureReading] = []
+        var successfulGroups: [(label: String, keys: [String])] = []
+
+        for group in groups {
+            var successfulKeys: [String] = []
+            var hottest: Double?
+            for key in group.keys {
+                guard let value = connection.read(key)?.numericValue,
+                      value.isFinite, value > 0, value < 130 else {
+                    continue
+                }
+                successfulKeys.append(key)
+                hottest = max(hottest ?? value, value)
+            }
+
+            if !successfulKeys.isEmpty {
+                successfulGroups.append((group.label, successfulKeys))
+            }
+            if let hottest {
+                readings.append(
+                    TemperatureReading(
+                        id: group.label.lowercased(),
+                        label: group.label,
+                        celsius: hottest
+                    )
+                )
+            }
+        }
+
+        return (readings, successfulGroups)
     }
 
     private func discoverTemperatureGroups(

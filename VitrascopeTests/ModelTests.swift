@@ -40,6 +40,35 @@ final class ModelTests: XCTestCase {
         XCTAssertEqual(buffer.elements, [3, 4, 5])
     }
 
+    func testClosedPanelSamplesOnlySelectedMetric() {
+        XCTAssertEqual(
+            SamplingProfile.profile(panelVisible: false, menuMetric: .cpu).intervals,
+            [.cpu: 1]
+        )
+        XCTAssertEqual(
+            SamplingProfile.profile(panelVisible: false, menuMetric: .memory).intervals,
+            [.memory: 2]
+        )
+        XCTAssertEqual(
+            SamplingProfile.profile(panelVisible: false, menuMetric: .gpu).intervals,
+            [.gpu: 2]
+        )
+        XCTAssertEqual(
+            SamplingProfile.profile(panelVisible: false, menuMetric: .temperature).intervals,
+            [.thermal: 5]
+        )
+        XCTAssertTrue(
+            SamplingProfile.profile(panelVisible: false, menuMetric: .iconOnly).intervals.isEmpty
+        )
+    }
+
+    func testOpenPanelUsesTieredSamplingIntervals() {
+        XCTAssertEqual(
+            SamplingProfile.profile(panelVisible: true, menuMetric: .iconOnly).intervals,
+            [.cpu: 1, .memory: 2, .gpu: 2, .thermal: 5, .processes: 2]
+        )
+    }
+
     func testMetricKindPersistsByRawValue() {
         for metric in MetricKind.allCases {
             XCTAssertEqual(MetricKind(rawValue: metric.rawValue), metric)
@@ -181,5 +210,13 @@ final class ModelTests: XCTestCase {
         XCTAssertEqual(MetricFormatting.processPercent(14.6), "15%")
         XCTAssertEqual(MetricFormatting.temperature(53.4), "53°C")
         XCTAssertEqual(MetricFormatting.rpm(1_999.6), "2000 RPM")
+    }
+
+    func testMenuBarValuesUseFixedColumns() {
+        XCTAssertEqual(MenuBarLabel.fixedColumns(for: "9%"), ["", "", "9", "%", ""])
+        XCTAssertEqual(MenuBarLabel.fixedColumns(for: "60%"), ["", "6", "0", "%", ""])
+        XCTAssertEqual(MenuBarLabel.fixedColumns(for: "100%"), ["1", "0", "0", "%", ""])
+        XCTAssertEqual(MenuBarLabel.fixedColumns(for: "63°C"), ["", "6", "3", "°", "C"])
+        XCTAssertEqual(MenuBarLabel.fixedColumns(for: nil), ["", "—", "", "", ""])
     }
 }

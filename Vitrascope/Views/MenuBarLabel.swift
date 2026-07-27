@@ -8,17 +8,24 @@ struct MenuBarLabel: View {
         HStack(spacing: 4) {
             Image(systemName: "waveform.path.ecg")
                 .symbolRenderingMode(.hierarchical)
+                .frame(width: 18, alignment: .center)
 
-            if let value {
-                Text(value)
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
-                    .monospacedDigit()
+            if metric != .iconOnly {
+                HStack(spacing: 0) {
+                    ForEach(Array(displayColumns.enumerated()), id: \.offset) { _, column in
+                        Text(verbatim: column)
+                            .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                            .frame(width: 9, alignment: .center)
+                    }
+                }
+                .frame(width: 45, alignment: .leading)
             }
         }
+        .fixedSize(horizontal: true, vertical: false)
         .accessibilityLabel(accessibilityText)
     }
 
-    private var value: String? {
+    private var displayValue: String? {
         switch metric {
         case .cpu:
             snapshot.cpu.value.map { MetricFormatting.percent($0.totalPercent) }
@@ -33,7 +40,49 @@ struct MenuBarLabel: View {
         }
     }
 
+    private var displayColumns: [String] {
+        Self.fixedColumns(for: displayValue)
+    }
+
+    static func fixedColumns(for value: String?) -> [String] {
+        guard let value else {
+            return ["", "—", "", "", ""]
+        }
+
+        let number: String
+        let unit: String
+        if value.hasSuffix("°C") {
+            number = String(value.dropLast(2))
+            unit = "°C"
+        } else if value.hasSuffix("%") {
+            number = String(value.dropLast())
+            unit = "%"
+        } else {
+            number = value
+            unit = ""
+        }
+
+        let numberCharacters = Array(number.suffix(3)).map(String.init)
+        let unitCharacters = Array(unit.prefix(2)).map(String.init)
+        let numberPadding = Array(repeating: "", count: 3 - numberCharacters.count)
+        let unitPadding = Array(repeating: "", count: 2 - unitCharacters.count)
+        return numberPadding + numberCharacters + unitCharacters + unitPadding
+    }
+
     private var accessibilityText: String {
-        value.map { "Vitrascope, \(metric.title) \($0)" } ?? "Vitrascope"
+        let value: String?
+        switch metric {
+        case .cpu:
+            value = snapshot.cpu.value.map { MetricFormatting.percent($0.totalPercent) }
+        case .memory:
+            value = snapshot.memory.value.map { MetricFormatting.percent($0.usagePercent) }
+        case .gpu:
+            value = snapshot.gpuPercent.value.map(MetricFormatting.percent)
+        case .temperature:
+            value = snapshot.cpuTemperature.value.map(MetricFormatting.temperature)
+        case .iconOnly:
+            value = nil
+        }
+        return value.map { "Vitrascope, \(metric.title) \($0)" } ?? "Vitrascope"
     }
 }

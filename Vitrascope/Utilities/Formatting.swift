@@ -1,13 +1,10 @@
 import Foundation
 
 enum MetricFormatting {
+    private static let byteFormatter = LockedByteCountFormatter()
+
     static func bytes(_ value: UInt64) -> String {
-        let formatter = ByteCountFormatter()
-        formatter.allowedUnits = [.useGB, .useMB]
-        formatter.countStyle = .memory
-        formatter.includesUnit = true
-        formatter.isAdaptive = true
-        return formatter.string(fromByteCount: Int64(clamping: value))
+        byteFormatter.string(fromByteCount: Int64(clamping: value))
     }
 
     static func percent(_ value: Double) -> String {
@@ -37,19 +34,48 @@ enum MetricFormatting {
     }
 }
 
+private final class LockedByteCountFormatter: @unchecked Sendable {
+    private let formatter: ByteCountFormatter
+    private let lock = NSLock()
+
+    init() {
+        let formatter = ByteCountFormatter()
+        formatter.allowedUnits = [.useGB, .useMB]
+        formatter.countStyle = .memory
+        formatter.includesUnit = true
+        formatter.isAdaptive = true
+        self.formatter = formatter
+    }
+
+    func string(fromByteCount value: Int64) -> String {
+        lock.lock()
+        defer { lock.unlock() }
+        return formatter.string(fromByteCount: value)
+    }
+}
+
 struct FixedRingBuffer<Element> {
-    private(set) var elements: [Element] = []
+    private var storage: [Element?]
+    private var nextIndex = 0
+    private var count = 0
     let capacity: Int
+
+    var elements: [Element] {
+        let start = count == capacity ? nextIndex : 0
+        return (0..<count).compactMap { offset in
+            storage[(start + offset) % capacity]
+        }
+    }
 
     init(capacity: Int) {
         precondition(capacity > 0)
         self.capacity = capacity
+        storage = Array(repeating: nil, count: capacity)
     }
 
     mutating func append(_ element: Element) {
-        elements.append(element)
-        if elements.count > capacity {
-            elements.removeFirst(elements.count - capacity)
-        }
+        storage[nextIndex] = element
+        nextIndex = (nextIndex + 1) % capacity
+        count = min(count + 1, capacity)
     }
 }

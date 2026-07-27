@@ -163,6 +163,8 @@ struct ProcessCollector: MetricCollector {
         var buffer = [CChar](repeating: 0, count: Int(MAXPATHLEN))
         let length = proc_name(pid, &buffer, UInt32(buffer.count))
         guard length > 0 else { return "Process \(pid)" }
-        return String(cString: buffer)
+        return buffer.withUnsafeBytes { bytes in
+            String(decoding: bytes.prefix(Int(length)), as: UTF8.self)
+        }
     }
 }
