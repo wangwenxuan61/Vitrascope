@@ -87,6 +87,11 @@ struct ProcessCollector: MetricCollector {
         self.timebase = timebase
     }
 
+    mutating func reset() {
+        previousSamples.removeAll(keepingCapacity: true)
+        previousTimestamp = nil
+    }
+
     mutating func collect() -> ProcessMetricsSnapshot {
         let timestamp = DispatchTime.now().uptimeNanoseconds
         let samples = readSamples()

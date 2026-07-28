@@ -23,14 +23,17 @@ struct MenuBarContentView: View {
                                 reading: monitor.snapshot.cpu,
                                 temperature: monitor.snapshot.cpuTemperature,
                                 processes: monitor.processes.topCPU,
-                                history: monitor.history
+                                history: monitor.history.cpu
                             )
                             MemoryCard(
                                 reading: monitor.snapshot.memory,
                                 processes: monitor.processes.topMemory,
-                                history: monitor.history
+                                history: monitor.history.memory
                             )
-                            GPUCard(reading: monitor.snapshot.gpuPercent, history: monitor.history)
+                            GPUCard(
+                                reading: monitor.snapshot.gpuPercent,
+                                history: monitor.history.gpu
+                            )
                             ThermalCard(
                                 thermalState: monitor.snapshot.thermalState,
                                 temperatures: monitor.snapshot.temperatures,
@@ -47,6 +50,12 @@ struct MenuBarContentView: View {
         }
         .frame(width: 380, height: 520)
         .preferredColorScheme(.light)
+        .onAppear {
+            monitor.setPanelVisible(true)
+        }
+        .onDisappear {
+            monitor.setPanelVisible(false)
+        }
     }
 
     private var header: some View {
