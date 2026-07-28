@@ -8,6 +8,29 @@ CPU and Memory cards also show the three processes currently consuming the
 most CPU time or memory. Process rankings refresh every two seconds and remain
 entirely on the Mac.
 
+## Preview
+
+<p align="center">
+  <img src="docs/images/vitrascope-overview.png"
+       alt="Vitrascope CPU and memory monitoring panel"
+       width="380">
+</p>
+
+<p align="center">
+  Live system metrics in a native Liquid Glass panel. Process names are
+  pixelated in this screenshot for privacy.
+</p>
+
+<p align="center">
+  <img src="docs/images/vitrascope-menu-bar.png"
+       alt="Vitrascope live temperature readout in the macOS menu bar"
+       width="160">
+</p>
+
+<p align="center">
+  Choose the metric you want to keep visible in the menu bar.
+</p>
+
 ## Requirements
 
 - Apple silicon Mac
