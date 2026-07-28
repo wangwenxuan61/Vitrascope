@@ -4,7 +4,7 @@ struct CPUCard: View {
     let reading: SensorAvailability<CPUReading>
     let temperature: SensorAvailability<Double>
     let processes: SensorAvailability<[ProcessResourceReading]>
-    let history: [SystemSnapshot]
+    let history: [MetricSample]
 
     var body: some View {
         MetricCard(title: "CPU", systemImage: "cpu", accent: .blue) {
@@ -23,18 +23,11 @@ struct CPUCard: View {
                     StatLabel(label: "System", value: MetricFormatting.percent(cpu.systemPercent))
                     Spacer()
                 }
-                MiniChart(points: cpuPoints, color: .blue)
+                MiniChart(points: history, color: .blue)
                 TopProcessList(readings: processes, metric: .cpu)
             case .unavailable(let message):
                 UnavailableReadingView(message: message)
             }
-        }
-    }
-
-    private var cpuPoints: [ChartPoint] {
-        history.compactMap { snapshot in
-            guard case .available(let value) = snapshot.cpu else { return nil }
-            return ChartPoint(date: snapshot.timestamp, value: value.totalPercent)
         }
     }
 
@@ -62,7 +55,7 @@ struct CPUCard: View {
 struct MemoryCard: View {
     let reading: SensorAvailability<MemoryReading>
     let processes: SensorAvailability<[ProcessResourceReading]>
-    let history: [SystemSnapshot]
+    let history: [MetricSample]
 
     var body: some View {
         MetricCard(
@@ -86,18 +79,11 @@ struct MemoryCard: View {
                     }
                 }
 
-                MiniChart(points: memoryPoints, color: .blue)
+                MiniChart(points: history, color: .blue)
                 TopProcessList(readings: processes, metric: .memory)
             case .unavailable(let message):
                 UnavailableReadingView(message: message)
             }
-        }
-    }
-
-    private var memoryPoints: [ChartPoint] {
-        history.compactMap { snapshot in
-            guard case .available(let value) = snapshot.memory else { return nil }
-            return ChartPoint(date: snapshot.timestamp, value: value.usagePercent)
         }
     }
 }
@@ -151,7 +137,7 @@ private struct TopProcessList: View {
 
 struct GPUCard: View {
     let reading: SensorAvailability<Double>
-    let history: [SystemSnapshot]
+    let history: [MetricSample]
 
     var body: some View {
         MetricCard(
@@ -165,17 +151,10 @@ struct GPUCard: View {
                     .font(.system(size: 28, weight: .semibold, design: .rounded))
                     .monospacedDigit()
 
-                MiniChart(points: gpuPoints, color: .indigo)
+                MiniChart(points: history, color: .indigo)
             case .unavailable(let message):
                 UnavailableReadingView(message: message)
             }
-        }
-    }
-
-    private var gpuPoints: [ChartPoint] {
-        history.compactMap { snapshot in
-            guard case .available(let value) = snapshot.gpuPercent else { return nil }
-            return ChartPoint(date: snapshot.timestamp, value: value)
         }
     }
 }

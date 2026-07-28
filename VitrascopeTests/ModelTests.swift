@@ -40,6 +40,48 @@ final class ModelTests: XCTestCase {
         XCTAssertEqual(buffer.elements, [3, 4, 5])
     }
 
+    func testClosedPanelSamplesOnlySelectedMetric() {
+        XCTAssertEqual(
+            SamplingProfile.profile(panelVisible: false, menuMetric: .cpu).intervals,
+            [.cpu: 1]
+        )
+        XCTAssertEqual(
+            SamplingProfile.profile(panelVisible: false, menuMetric: .memory).intervals,
+            [.memory: 2]
+        )
+        XCTAssertEqual(
+            SamplingProfile.profile(panelVisible: false, menuMetric: .gpu).intervals,
+            [.gpu: 2]
+        )
+        XCTAssertEqual(
+            SamplingProfile.profile(panelVisible: false, menuMetric: .temperature).intervals,
+            [.thermal: 5]
+        )
+        XCTAssertTrue(
+            SamplingProfile.profile(panelVisible: false, menuMetric: .iconOnly).intervals.isEmpty
+        )
+    }
+
+    func testOpenPanelUsesTieredSamplingIntervals() {
+        XCTAssertEqual(
+            SamplingProfile.profile(panelVisible: true, menuMetric: .iconOnly).intervals,
+            [.cpu: 1, .memory: 2, .gpu: 2, .thermal: 5, .processes: 2]
+        )
+    }
+
+    func testSamplingProfileIdentifiesNewlyActivatedCollectors() {
+        let iconOnly = SamplingProfile.profile(panelVisible: false, menuMetric: .iconOnly)
+        let cpuOnly = SamplingProfile.profile(panelVisible: false, menuMetric: .cpu)
+        let panelOpen = SamplingProfile.profile(panelVisible: true, menuMetric: .cpu)
+
+        XCTAssertEqual(panelOpen.requestsActivated(since: iconOnly), .all)
+        XCTAssertEqual(
+            panelOpen.requestsActivated(since: cpuOnly),
+            [.memory, .gpu, .thermal, .processes]
+        )
+        XCTAssertEqual(cpuOnly.requestsActivated(since: panelOpen), [])
+    }
+
     func testMetricKindPersistsByRawValue() {
         for metric in MetricKind.allCases {
             XCTAssertEqual(MetricKind(rawValue: metric.rawValue), metric)
@@ -182,4 +224,5 @@ final class ModelTests: XCTestCase {
         XCTAssertEqual(MetricFormatting.temperature(53.4), "53°C")
         XCTAssertEqual(MetricFormatting.rpm(1_999.6), "2000 RPM")
     }
+
 }

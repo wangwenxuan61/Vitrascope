@@ -6,12 +6,15 @@ struct VitrascopeApp: App {
     @AppStorage("menuBarMetric") private var menuMetricRawValue = MetricKind.cpu.rawValue
 
     var body: some Scene {
-        MenuBarExtra {
+        MenuBarExtra(isInserted: .constant(!Self.isRunningTests)) {
             MenuBarContentView(
                 monitor: monitor,
                 selectedMetric: Binding(
                     get: { MetricKind(rawValue: menuMetricRawValue) ?? .cpu },
-                    set: { menuMetricRawValue = $0.rawValue }
+                    set: {
+                        menuMetricRawValue = $0.rawValue
+                        monitor.setMenuMetric($0)
+                    }
                 )
             )
         } label: {
@@ -21,5 +24,9 @@ struct VitrascopeApp: App {
             )
         }
         .menuBarExtraStyle(.window)
+    }
+
+    private static var isRunningTests: Bool {
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
     }
 }

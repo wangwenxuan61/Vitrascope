@@ -114,3 +114,30 @@ struct SystemSnapshot: Equatable, Sendable, Identifiable {
         fans: .unavailable("Collecting")
     )
 }
+
+struct MetricSample: Equatable, Sendable, Identifiable {
+    let timestamp: Date
+    let value: Double
+
+    var id: Date { timestamp }
+}
+
+struct MetricHistory: Equatable, Sendable {
+    let cpu: [MetricSample]
+    let memory: [MetricSample]
+    let gpu: [MetricSample]
+
+    static let empty = MetricHistory(cpu: [], memory: [], gpu: [])
+}
+
+struct MonitorState: Equatable, Sendable {
+    let snapshot: SystemSnapshot
+    let history: MetricHistory
+    let processes: ProcessMetricsSnapshot
+
+    static let empty = MonitorState(
+        snapshot: .empty,
+        history: .empty,
+        processes: .empty
+    )
+}

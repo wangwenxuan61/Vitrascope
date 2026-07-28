@@ -2,6 +2,16 @@ import XCTest
 @testable import Vitrascope
 
 final class CollectorTests: XCTestCase {
+    func testCPUCollectorResetRequiresANewBaseline() {
+        var collector = CPUCollector()
+        _ = collector.collect()
+        _ = collector.collect()
+
+        collector.reset()
+
+        XCTAssertEqual(collector.collect(), .unavailable("Collecting"))
+    }
+
     func testMemoryCollectorReturnsValidReadingOrUnavailable() {
         var collector = MemoryCollector()
         switch collector.collect() {
@@ -50,5 +60,15 @@ final class CollectorTests: XCTestCase {
             XCTAssertLessThanOrEqual(processes.count, 3)
             XCTAssertTrue(processes.allSatisfy { !$0.name.isEmpty && $0.memoryBytes > 0 })
         }
+    }
+
+    func testProcessCollectorResetRequiresANewCPUBaseline() {
+        var collector = ProcessCollector()
+        _ = collector.collect()
+        _ = collector.collect()
+
+        collector.reset()
+
+        XCTAssertEqual(collector.collect().topCPU, .unavailable("Calculating"))
     }
 }

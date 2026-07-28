@@ -1,21 +1,14 @@
 import Charts
 import SwiftUI
 
-struct ChartPoint: Identifiable {
-    let date: Date
-    let value: Double
-
-    var id: Date { date }
-}
-
 struct MiniChart: View {
-    let points: [ChartPoint]
+    let points: [MetricSample]
     let color: Color
 
     var body: some View {
         Chart(points) { point in
             AreaMark(
-                x: .value("Time", point.date),
+                x: .value("Time", point.timestamp),
                 yStart: .value("Minimum", 0),
                 yEnd: .value("Value", point.value)
             )
@@ -29,7 +22,7 @@ struct MiniChart: View {
             .interpolationMethod(.catmullRom)
 
             LineMark(
-                x: .value("Time", point.date),
+                x: .value("Time", point.timestamp),
                 y: .value("Value", point.value)
             )
             .foregroundStyle(color)
@@ -45,8 +38,8 @@ struct MiniChart: View {
     }
 
     private var xDomain: ClosedRange<Date> {
-        let end = points.last?.date ?? .now
-        let start = points.first?.date ?? end.addingTimeInterval(-60)
+        let end = points.last?.timestamp ?? .now
+        let start = points.first?.timestamp ?? end.addingTimeInterval(-60)
         return start...max(end, start.addingTimeInterval(1))
     }
 }

@@ -35,6 +35,10 @@ enum CPUUsageCalculator {
 struct CPUCollector: MetricCollector {
     private var previousTicks: CPUTicks?
 
+    mutating func reset() {
+        previousTicks = nil
+    }
+
     mutating func collect() -> SensorAvailability<CPUReading> {
         guard let currentTicks = readTicks() else {
             return .unavailable("CPU data unavailable")
