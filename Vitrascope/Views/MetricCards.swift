@@ -2,7 +2,7 @@ import SwiftUI
 
 struct CPUCard: View {
     let reading: SensorAvailability<CPUReading>
-    let temperature: SensorAvailability<Double>
+    let temperature: SensorAvailability<TemperatureReading>
     let processes: SensorAvailability<[ProcessResourceReading]>
     let history: [SystemSnapshot]
 
@@ -42,19 +42,22 @@ struct CPUCard: View {
     private var cpuTemperature: some View {
         VStack(alignment: .trailing, spacing: 1) {
             switch temperature {
-            case .available(let value):
-                Text(MetricFormatting.temperature(value))
+            case .available(let reading):
+                Text(MetricFormatting.temperature(reading.celsius))
                     .font(.system(size: 19, weight: .semibold, design: .rounded))
                     .foregroundStyle(.blue)
                     .monospacedDigit()
+                Text(reading.label)
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(.secondary)
             case .unavailable:
                 Text("Unavailable")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.secondary)
+                Text("Processor Temperature")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(.secondary)
             }
-            Text("CPU Temperature")
-                .font(.system(size: 9, weight: .medium))
-                .foregroundStyle(.secondary)
         }
     }
 }

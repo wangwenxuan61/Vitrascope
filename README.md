@@ -42,6 +42,11 @@ interfaces that Apple does not expose uniformly. Vitrascope shows
 `Unavailable` when a value is not published by the current Mac instead of
 requesting administrator access.
 
+When macOS exposes named CPU sensors, Vitrascope displays their average. On
+Macs that expose only ambiguous PMU die sensors, it reports an averaged
+`SoC Estimate` instead of presenting the hottest unrelated sensor as CPU
+temperature.
+
 ## Install from a DMG
 
 1. Download `Vitrascope-0.3.1-arm64.dmg` from

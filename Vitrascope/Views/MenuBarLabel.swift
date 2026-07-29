@@ -27,7 +27,9 @@ struct MenuBarLabel: View {
         case .gpu:
             snapshot.gpuPercent.value.map(MetricFormatting.percent)
         case .temperature:
-            snapshot.cpuTemperature.value.map(MetricFormatting.temperature)
+            snapshot.processorTemperature.value.map {
+                MetricFormatting.temperature($0.celsius)
+            }
         case .iconOnly:
             nil
         }

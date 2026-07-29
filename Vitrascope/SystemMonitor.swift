@@ -15,7 +15,7 @@ private actor MetricsSampler {
         let smc = smcCollector.collect()
         let temperatures = Self.mergedTemperatures(
             smc: smc.temperatures,
-            hidCPU: hidTemperatureCollector.collect()
+            hid: hidTemperatureCollector.collect()
         )
         if sampleCount.isMultiple(of: 2) {
             latestProcessMetrics = processCollector.collect()
@@ -36,22 +36,21 @@ private actor MetricsSampler {
 
     private static func mergedTemperatures(
         smc: SensorAvailability<[TemperatureReading]>,
-        hidCPU: SensorAvailability<Double>
+        hid: SensorAvailability<[TemperatureReading]>
     ) -> SensorAvailability<[TemperatureReading]> {
-        if case .available(let smcReadings) = smc,
-           smcReadings.contains(where: { $0.id == "cpu" }) {
+        switch (smc, hid) {
+        case (.available(let smcReadings), .available(let hidReadings)):
+            let smcIDs = Set(smcReadings.map(\.id))
+            return .available(
+                smcReadings + hidReadings.filter { !smcIDs.contains($0.id) }
+            )
+        case (.available, _):
             return smc
+        case (_, .available):
+            return hid
+        case (.unavailable(let message), .unavailable):
+            return .unavailable(message)
         }
-
-        guard case .available(let cpuTemperature) = hidCPU else {
-            return smc
-        }
-        let cpu = TemperatureReading(id: "cpu", label: "CPU", celsius: cpuTemperature)
-
-        if case .available(let smcReadings) = smc {
-            return .available([cpu] + smcReadings.filter { $0.id != "cpu" })
-        }
-        return .available([cpu])
     }
 
     private static func thermalState() -> SystemThermalState {

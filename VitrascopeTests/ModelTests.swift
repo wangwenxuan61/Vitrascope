@@ -66,6 +66,39 @@ final class ModelTests: XCTestCase {
         )
 
         XCTAssertEqual(snapshot.cpuTemperature.value ?? -1, 62.5, accuracy: 0.001)
+        XCTAssertEqual(
+            snapshot.processorTemperature.value?.id,
+            "cpu"
+        )
+    }
+
+    func testSnapshotFallsBackToEstimatedSoCTemperature() {
+        let snapshot = SystemSnapshot(
+            timestamp: .now,
+            cpu: .unavailable("Collecting"),
+            memory: .unavailable("Collecting"),
+            gpuPercent: .unavailable("Collecting"),
+            thermalState: .nominal,
+            temperatures: .available([
+                TemperatureReading(
+                    id: "soc",
+                    label: "SoC Estimate",
+                    celsius: 58.5
+                )
+            ]),
+            fans: .unavailable("No fan data")
+        )
+
+        XCTAssertNil(snapshot.cpuTemperature.value)
+        XCTAssertEqual(
+            snapshot.processorTemperature.value?.celsius ?? -1,
+            58.5,
+            accuracy: 0.001
+        )
+        XCTAssertEqual(
+            snapshot.processorTemperature.value?.label,
+            "SoC Estimate"
+        )
     }
 
     func testProcessMetricsSortCPUAndMemoryIndependently() {

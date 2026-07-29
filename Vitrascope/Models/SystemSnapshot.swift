@@ -104,6 +104,15 @@ struct SystemSnapshot: Equatable, Sendable, Identifiable {
         return .available(reading.celsius)
     }
 
+    var processorTemperature: SensorAvailability<TemperatureReading> {
+        guard case .available(let readings) = temperatures,
+              let reading = readings.first(where: { $0.id == "cpu" })
+                ?? readings.first(where: { $0.id == "soc" }) else {
+            return .unavailable("Processor temperature unavailable")
+        }
+        return .available(reading)
+    }
+
     static let empty = SystemSnapshot(
         timestamp: .now,
         cpu: .unavailable("Collecting"),

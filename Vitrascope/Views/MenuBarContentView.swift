@@ -21,7 +21,7 @@ struct MenuBarContentView: View {
                         VStack(spacing: 12) {
                             CPUCard(
                                 reading: monitor.snapshot.cpu,
-                                temperature: monitor.snapshot.cpuTemperature,
+                                temperature: monitor.snapshot.processorTemperature,
                                 processes: monitor.processes.topCPU,
                                 history: monitor.history
                             )

@@ -259,8 +259,12 @@ struct SMCCollector: MetricCollector {
                 }
                 return value
             }
-            guard let hottest = values.max() else { return nil }
-            return TemperatureReading(id: group.label.lowercased(), label: group.label, celsius: hottest)
+            guard !values.isEmpty else { return nil }
+            return TemperatureReading(
+                id: group.label.lowercased(),
+                label: "\(group.label) Average",
+                celsius: values.reduce(0, +) / Double(values.count)
+            )
         }
 
         let fans: [FanReading]
